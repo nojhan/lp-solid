@@ -20,7 +20,8 @@ _lp_solid_theme_activate() {
 
         #0    5    10   15   20   25   30   35   40   45   50   55   60   65   70   75   80   85
         #|····|····|····|····|····|····|····|····|····|····|····|····|····|····|····|····|····|
-    readonly BOARD_TEMPLATE=(
+    #readonly
+    BOARD_TEMPLATE=(
         '┌────┐             ┌───┐'                                                               #  0
         '│v2.2│            ╓┘   └─────────────────────────────╥──────────────────╥───────────┄·' #  1
         '├────┴────────────╢ diff:[       ] hdst:[           ]║pyev:[           ]║cmak:'         #  2
@@ -44,9 +45,9 @@ _lp_solid_theme_activate() {
     BOARD_LOC["batt"]="4 13 4"
     BOARD_LOC["temp"]="5 13 4"
 
-    BOARD_LOC["suspd"]="7 13 3"
-    BOARD_LOC["bkgrd"]="8 13 3"
-    BOARD_LOC["dtchd"]="9 13 3"
+    BOARD_LOC["suspd"]="7 13 4"
+    BOARD_LOC["bkgrd"]="8 13 4"
+    BOARD_LOC["dtchd"]="9 13 4"
 
     BOARD_LOC["RSH"]="11 5 1"
     BOARD_LOC["X11"]="12 5 1"
@@ -127,6 +128,7 @@ __lp_board_put() {
 
     # Read field's parameters.
     local row raw_col raw_field_len
+    # printf "field:$field\n"
     IFS=" " read -r row raw_col raw_field_len <<<"${BOARD_LOC[$field]}"
 
     # Remove any invisible characters (colors),
@@ -331,11 +333,13 @@ _lp_solid_theme_prompt() {
                 __lp_board_put "$lp_vcs_stash_count" "stash" "$SP_COLOR_NOTE"
             fi
 
-            if _lp_vcs_tag; then
-                __lp_board_put "$lp_vcs_tag" "vers" "$SP_COLOR_NOTE"
-            else
-                _lp_vcs_commit_id
-                __lp_board_put "$lp_vcs_commit_id" "vers" "$SP_COLOR_NOTE"
+            if ! _lp_vcs_branch; then
+                if _lp_vcs_tag; then
+                    __lp_board_put "$lp_vcs_tag" "vers" "$SP_COLOR_NOTE"
+                else
+                    _lp_vcs_commit_id
+                    __lp_board_put "$lp_vcs_commit_id" "vers" "$SP_COLOR_NOTE"
+                fi
             fi
         fi
     fi
@@ -452,14 +456,13 @@ _lp_solid_theme_prompt() {
             color="$SP_COLOR_BASE"
         fi
         __lp_board_put "$lp_detached_sessions" "dtchd" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "dtchd" "$SP_COLOR_BASE"
     fi
 
-    if (( _LP_ENABLE_TMUX )); then
-        if _lp_multiplexer; then
-            __lp_board_put "$lp_multiplexer" "mux" "$SP_COLOR_NOTE"
-        fi
-    else
-        __lp_board_put "$SP_MARK_HIDDEN" "mux" "$SP_COLOR_BASE"
+    # TODO: add LP_ENABLE_TMUX todo Liquid Prompt
+    if _lp_multiplexer; then
+        __lp_board_put "$lp_multiplexer" "mux" "$SP_COLOR_NOTE"
     fi
 
     if _lp_hostname; then
@@ -493,7 +496,7 @@ _lp_solid_theme_prompt() {
         __lp_board_put "$SP_MARK_HIDDEN" "host" "$SP_COLOR_BASE"
     fi
 
-    if ((LP_SHELL_zsh)); then
+    if ((_LP_SHELL_zsh)); then
         __lp_board_put "zsh" "shel" "$SP_COLOR_NOTE"
     else
         __lp_board_put "bash" "shel" "$SP_COLOR_NOTE"
@@ -514,9 +517,9 @@ _lp_solid_theme_prompt() {
     fi
 
     if (( LP_ENABLE_ERROR )); then
-        __lp_board_put "$LP_ERR" "err" "$SP_COLOR_NOTE"
+        __lp_board_put "$LP_ERR" "error" "$SP_COLOR_NOTE"
     else
-        __lp_board_put "$SP_MARK_HIDDEN" "err" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "error" "$SP_COLOR_BASE"
     fi
 
     if (( LP_ENABLE_SUDO )); then
@@ -530,7 +533,7 @@ _lp_solid_theme_prompt() {
     # Prompt line #12
     # TODO add LP_ENABLE_DISPLAY in Liquid Prompt
     if _lp_connected_display; then
-        __lp_board_put "$LP_" "X11" "$SP_COLOR_NOTE"
+        __lp_board_put "1" "X11" "$SP_COLOR_NOTE"
     fi
 
     if (( LP_ENABLE_DIRSTACK )); then
@@ -538,7 +541,7 @@ _lp_solid_theme_prompt() {
             __lp_board_put "$lp_dirstack" "drstk" "$SP_COLOR_NOTE"
         fi
     else
-        __lp_board_put "$SP_MARK_HIDDEN" "FIXME" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "drstk" "$SP_COLOR_BASE"
     fi
 
     __lp_board_put "$LP_PWD" "path" # No forced color, already set as global config.
