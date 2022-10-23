@@ -7,6 +7,7 @@ Its aim is not to actually be used as a day-to-day prompt (but you do you),
 but to expose everything that Liquid Prompt actually watches.
 It thus shows a table with the full state of the system, as seen by Liquid Prompt.
 
+[So far, *Solid* is only implemented for Bash, but Zsh will come sooner or later.)
 
 Preview
 -------
@@ -27,7 +28,7 @@ which may be especially useful if you are a theme designer.
 Each element of the table is a label, followed by a colon and a field.
 The field can be either a boolean flag ("◌"=false, "●"=true), or a fixed-size entry (between squared brackets).
 
-Entries can show numbers (always right-aligned), texts or be filled by a "/" character.
+Entries can show numbers (always left-aligned), texts or be filled by a "/" character.
 This last state indicates that the configuration is explicitely asking for the field to not be displayed
 (i.e. the `LP_ENABLE_*` variable is set to 0).
 
