@@ -7,7 +7,11 @@ Its aim is not to actually be used as a day-to-day prompt (but you do you),
 but to expose everything that Liquid Prompt actually watches.
 It thus shows a table with the full state of the system, as seen by Liquid Prompt.
 
-[So far, *Solid* is only implemented for Bash, but Zsh will come sooner or later.)
+So far, *Solid* works for modern shells, supporting associative arrays
+(that is Bash > 4.0, and Zsh > 3.1.6).
+Note that Liquid Prompt does not have this requirement,
+so it may work on your system, while *Solid* does not.
+
 
 Preview
 -------

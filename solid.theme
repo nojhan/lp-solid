@@ -100,7 +100,7 @@ _lp_solid_theme_directory() {
     _lp_default_theme_directory
 }
 
-__lp_board_put() {
+__lp_board_put() { # what field color
     # WARNING: this should be called on fields ordered from left to right in the board order.
     local what="$1"
     [[ -n "$what" ]] || return 1
@@ -128,8 +128,13 @@ __lp_board_put() {
 
     # Read field's parameters.
     local row raw_col raw_field_len
-    # printf "field:$field\n"
-    IFS=" " read -r row raw_col raw_field_len <<<"${BOARD_LOC[$field]}"
+    IFS=" " read -r row raw_col raw_field_len <<<"${BOARD_LOC["$field"]}"
+
+    if (( _LP_SHELL_zsh )); then
+        # 1-indexing
+        row=$((row+1))
+        raw_col=$((raw_col+1))
+    fi
 
     # Remove any invisible characters (colors),
     # to get a visible length.
@@ -159,8 +164,13 @@ __lp_board_put() {
     fi
     # If the data is too large to fit the field.
     if [[ $raw_field_len -ne 0 && $raw_data_len -gt $raw_field_len ]]; then
-        # Shorten to fit the field.
-        raw_data="${raw_data:0:$((raw_field_len-1))}…"
+        if (( _LP_SHELL_zsh )); then
+            #Here, raw_field_len == 1+raw_field_len-1
+            raw_data="${raw_data[1,raw_field_len]}…"
+        else
+            # Shorten to fit the field.
+            raw_data="${raw_data:0:$((raw_field_len-1))}…"
+        fi
         raw_data_len="$raw_field_len"
         data="$raw_data" # FIXME this remove any color.
         data_len="$raw_data_len"
@@ -179,13 +189,17 @@ __lp_board_put() {
 
     local raw_suffix_len=$((raw_total_len-raw_after))
 
-    local prefix="${BOARD_CURRENT[$row]:0:prefix_len}"
-    local suffix="${BOARD_TEMPLATE[$row]:raw_after:raw_suffix_len}"
+    if (( _LP_SHELL_zsh )); then
+        # local prefix="${BOARD_CURRENT[$row][1,$((1+prefix_len))]}"
+        local prefix="${BOARD_CURRENT[$row][1,prefix_len-1]}"
+        # local suffix="${BOARD_TEMPLATE[$row][$((1+raw_after)),$((1+raw_after+raw_suffix_len))]}"
+        local suffix="${BOARD_TEMPLATE[$row][raw_after,raw_after+raw_suffix_len]}"
+    else
+        local prefix="${BOARD_CURRENT[$row]:0:prefix_len}"
+        local suffix="${BOARD_TEMPLATE[$row]:raw_after:raw_suffix_len}"
+    fi
     local line="${prefix}${color}${data}${SP_COLOR_BASE}${suffix}"
     BOARD_CURRENT[$row]="$line"
-
-    # printf "##### $field: #####\n"
-    # printf "prefix«${prefix}»\ndelta«$delta»\ndata«${data}»\nsuffix«${suffix}»\n\n"
 
     local color_shift=$((data_len-raw_data_len+${#color}+${#SP_COLOR_BASE}))
     BOARD_DELTA[$row]=$((delta+color_shift))
@@ -319,8 +333,8 @@ _lp_solid_theme_prompt() {
         else
             color="$SP_COLOR_BASE"
         fi
-        __lp_board_put "$lp_battery%" "batt" "$color"
-        # __lp_board_put "$lp_battery" "batt" "$color"
+
+        __lp_board_put "${lp_battery}${_LP_PERCENT}" "batt" "$color"
     else
         __lp_board_put "$SP_MARK_HIDDEN" "batt" "$SP_COLOR_BASE"
     fi
@@ -517,7 +531,9 @@ _lp_solid_theme_prompt() {
     fi
 
     if (( LP_ENABLE_ERROR )); then
-        __lp_board_put "$LP_ERR" "error" "$SP_COLOR_NOTE"
+        if _lp_error; then
+            __lp_board_put "$lp_error" "error" "$SP_COLOR_NOTE"
+        fi
     else
         __lp_board_put "$SP_MARK_HIDDEN" "error" "$SP_COLOR_BASE"
     fi
