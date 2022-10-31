@@ -108,6 +108,12 @@ __lp_board_put() { # what field color
     [[ -n "$field" ]] || return 1
     local color="${3-}"
 
+    # printf "\n##### ${field} #####\n"
+    # __lp_escape "$what"
+    # local ewhat="$ret"
+    # # printf "ewhat:«%s${NO_COL}»\n" "$ewhat"
+    # # printf "ewhat:«%q»\n" "$ewhat"
+
     #                     raw_col raw_after
     #                        │       │
     #| inprefix:[1] | field:[raw_data     ] |
@@ -140,7 +146,11 @@ __lp_board_put() { # what field color
     # to get a visible length.
     __lp_strip_escapes "$what"
     local raw_data="$ret"
-    local raw_data_len=${#ret}
+    # printf "ZERO raw_data:«%s»\n" "${raw_data}"
+    # printf "ZERO raw_data:«%q»\n" "${raw_data}"
+    local raw_data_len=${#raw_data}
+    # __lp_escape "$what"
+    # local data="$ret"
     local data="$what"
     local data_len=${#data}
 
@@ -154,7 +164,7 @@ __lp_board_put() { # what field color
         data_len=$raw_field_len
         raw_data="$data"
         raw_data_len=$data_len
-    elif [[ $raw_field_len -eq 1 ]]; then #|| $raw_data_len -eq 1 ]]; then
+    elif [[ $raw_field_len -eq 1 ]]; then
         if [[ $raw_data != 0 && "$raw_data" != " " ]]; then
             data="●"
             data_len=1
@@ -162,6 +172,9 @@ __lp_board_put() { # what field color
             raw_data_len=1
         fi
     fi
+
+    # printf "FIRST raw_data:«${raw_data}»\n"
+    # printf "$raw_field_len -ne 0 && $raw_data_len -gt $raw_field_len\n"
     # If the data is too large to fit the field.
     if [[ $raw_field_len -ne 0 && $raw_data_len -gt $raw_field_len ]]; then
         if (( _LP_SHELL_zsh )); then
@@ -175,6 +188,7 @@ __lp_board_put() { # what field color
         data="$raw_data" # FIXME this remove any color.
         data_len="$raw_data_len"
     fi
+    # printf "SECOND raw_data:«${raw_data}»\n"
 
     local raw_total_len=${#BOARD_TEMPLATE[$row]}
 
@@ -190,20 +204,41 @@ __lp_board_put() { # what field color
     local raw_suffix_len=$((raw_total_len-raw_after))
 
     if (( _LP_SHELL_zsh )); then
-        # local prefix="${BOARD_CURRENT[$row][1,$((1+prefix_len))]}"
         local prefix="${BOARD_CURRENT[$row][1,prefix_len-1]}"
-        # local suffix="${BOARD_TEMPLATE[$row][$((1+raw_after)),$((1+raw_after+raw_suffix_len))]}"
         local suffix="${BOARD_TEMPLATE[$row][raw_after,raw_after+raw_suffix_len]}"
     else
         local prefix="${BOARD_CURRENT[$row]:0:prefix_len}"
         local suffix="${BOARD_TEMPLATE[$row]:raw_after:raw_suffix_len}"
     fi
+
+    # printf "what:«${what}»\nraw_data:«${raw_data}»\n"
+    # printf "prefix:«${prefix}\ncolor:«${color}color»\ndata:«${data}»\nsuffix:«${suffix}»\n"
+
     local line="${prefix}${color}${data}${SP_COLOR_BASE}${suffix}"
     BOARD_CURRENT[$row]="$line"
 
     local color_shift=$((data_len-raw_data_len+${#color}+${#SP_COLOR_BASE}))
     BOARD_DELTA[$row]=$((delta+color_shift))
 }
+
+# __sp_strip_escapes() {
+#     if ! shopt -q extglob ; then
+#         local _lp_no_extglob=true
+#         shopt -s extglob
+#     fi
+
+#     ret="${1//"${_LP_OPEN_ESC}"!(*"${_LP_CLOSE_ESC}"*)"${_LP_CLOSE_ESC}"}"
+
+#     if [[ -n ${_lp_no_extglob-} ]]; then
+#         shopt -u extglob
+#     fi
+
+#     ret="${ret//\\\\/\\}"
+#     if shopt -q promptvars ; then
+#         ret="${ret//\\\$/\$}"
+#         ret="${ret//\\\`/\`}"
+#     fi
+# }
 
 _lp_solid_theme_prompt() {
     local color
@@ -293,7 +328,7 @@ _lp_solid_theme_prompt() {
         else
             color="$SP_COLOR_BASE"
         fi
-        __lp_board_put "${lp_load_adjusted}${NO_COL}" "load" "$color"
+        __lp_board_put "${lp_load_adjusted}" "load" "$color"
     else
         __lp_board_put "$SP_MARK_HIDDEN" "load" "$SP_COLOR_BASE"
     fi
@@ -305,11 +340,14 @@ _lp_solid_theme_prompt() {
             if _lp_vcs_commits_off_remote; then
                 local has_commit=
                 if [[ "$lp_vcs_commit_ahead" -ne "0" && "$lp_vcs_commit_behind" -ne "0" ]]; then
-                    has_commit="${LP_COLOR_COMMITS}+$lp_vcs_commit_ahead${NO_COL}/${LP_COLOR_COMMITS_BEHIND}-$lp_vcs_commit_behind${NO_COL}"
+                    # has_commit="${LP_COLOR_COMMITS}+$lp_vcs_commit_ahead${NO_COL}/${LP_COLOR_COMMITS_BEHIND}-$lp_vcs_commit_behind${NO_COL}"
+                    has_commit="+$lp_vcs_commit_ahead/-$lp_vcs_commit_behind"
                 elif [[ "$lp_vcs_commit_ahead" -ne "0" ]]; then
-                    has_commit="${LP_COLOR_COMMITS}$lp_vcs_commit_ahead${NO_COL}"
+                    # has_commit="${LP_COLOR_COMMITS}$lp_vcs_commit_ahead${NO_COL}"
+                    has_commit="$lp_vcs_commit_ahead"
                 elif [[ "$lp_vcs_commit_behind" -ne "0" ]]; then
-                    has_commit="${LP_COLOR_COMMITS_BEHIND}-$lp_vcs_commit_behind${NO_COL}"
+                    # has_commit="${LP_COLOR_COMMITS_BEHIND}-$lp_vcs_commit_behind${NO_COL}"
+                    has_commit="-$lp_vcs_commit_behind"
                 fi
                 __lp_board_put "$has_commit" "comit" "$SP_COLOR_NOTE"
             fi
@@ -450,7 +488,13 @@ _lp_solid_theme_prompt() {
     fi
 
     if (( LP_ENABLE_RUNTIME )); then
-        __lp_board_put "$LP_RUNTIME" "rntm" "$SP_COLOR_NOTE"
+        if _lp_runtime_format; then
+            local color="$SP_COLOR_NOTE"
+            if (( _LP_RUNTIME_SECONDS >= LP_RUNTIME_THRESHOLD )); then
+                color="$SP_COLOR_WARN"
+            fi
+            __lp_board_put "$lp_runtime_format" "rntm" "$color"
+        fi
     else
         __lp_board_put "$SP_MARK_HIDDEN" "rntm" "$SP_COLOR_BASE"
     fi
@@ -559,7 +603,11 @@ _lp_solid_theme_prompt() {
     else
         __lp_board_put "$SP_MARK_HIDDEN" "drstk" "$SP_COLOR_BASE"
     fi
-
+    # local lp_path_format
+    # _lp_path_format "$LP_COLOR_PATH" "$LP_COLOR_PATH_LAST_DIR" "$LP_COLOR_PATH_VCS_ROOT" "$LP_COLOR_PATH_SHORTENED" "/" "$LP_COLOR_PATH_SEPARATOR"
+    # __sp_strip_escapes "$lp_path_format"
+    # __lp_board_put "<$ret>" "path" # No forced color, already set as global config.
+    # __lp_board_put "<$lp_path_format>" "path" # No forced color, already set as global config.
     __lp_board_put "$LP_PWD" "path" # No forced color, already set as global config.
 
     if [[ ! -w "${PWD}" ]]; then

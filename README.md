@@ -16,6 +16,8 @@ so it may work on your system, while *Solid* does not.
 Preview
 -------
 
+![image](solid-long.png)
+
 ![image](solid-demo.png)
 
 
