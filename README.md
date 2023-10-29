@@ -12,6 +12,8 @@ So far, *Solid* works for modern shells, supporting associative arrays
 Note that Liquid Prompt does not have this requirement,
 so it may work on your system, while *Solid* does not.
 
+WARNING: this theme is for debugging/didactic purpose only, it is ***EXTREMELY*** slow.
+
 
 Preview
 -------
