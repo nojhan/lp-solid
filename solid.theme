@@ -31,7 +31,7 @@ _lp_solid_theme_activate() {
         '│2.2.0 vs [     ]││  VCS:[       ] remt:[           ]├──────────────────╥┘ OS:◌└────┄·' #  1
         '├────────────────┴┤ diff:[       ] hdst:[           ]║pyev:[           ]║krnl:'         #  2
         '│    ⎧load:[     ]║comit:[       ] bkmk:[           ]║node:[           ]║fmly:'         #  3
-        '│    ⎪mram:[     ]║stash:[       ] vers:[           ]║ruby:[           ]║dstr:'         #  4
+        '│    ⎪ ram:[     ]║stash:[       ] vers:[           ]║ruby:[           ]║dstr:'         #  4
         '│snsr⎨batt:[     ]║utrak:[       ] brch:[           ]║kube:[           ]║vers:'         #  5
         '│    ⎪disk:[     ]╠══════════════════════════════════╣trfm:[           ]║arch:'         #  6
         '│    ⎩temp:[     ]║X11:◌ su:◌ sudo:◌ proxy:◌ chroot:◌║cont:[           ]╚═══════════┄·' #  7
@@ -97,8 +97,8 @@ _lp_solid_theme_activate() {
     BOARD_LOC["kube"]="5 60 11"
     BOARD_LOC["trfm"]="6 60 11"
     BOARD_LOC["cont"]="7 60 11"
-    BOARD_LOC["scls"]="8 60 11"
-    BOARD_LOC["awsp"]="9 60 11"
+    BOARD_LOC["awsp"]="8 60 11"
+    BOARD_LOC["scls"]="9 60 11"
     BOARD_LOC["shel"]="10 60 4"
 
     BOARD_LOC["os"]="1 78 1"
