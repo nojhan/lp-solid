@@ -54,7 +54,8 @@ Smallid Rationale
 
 The `smallid` theme follows the same idea of displaying everything at the same place,
 but does it mostly by coloring tags, showing less detailled information,
-but in a smallest array.
+but in a smallest array (6 rows and 56 columns wide, which appear to be
+the width of my phone's terminal under [Termux](https://termux.dev)).
 
 
 ### Explanations
