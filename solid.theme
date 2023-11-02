@@ -122,13 +122,14 @@ _lp_solid_theme_directory() {
     _lp_default_theme_directory
 }
 
-__lp_board_put() { # what field color
+__lp_board_put() { # what field [color [shorten_char="…"]]
     # WARNING: this should be called on fields ordered from left to right in the board order.
     local what="$1"
     [[ -n "$what" ]] || return 1
     local field="$2"
     [[ -n "$field" ]] || return 1
     local color="${3-}"
+    local shorten_char=${4-"…"}
 
     # printf "\n##### ${field} #####\n"
     # __lp_escape "$what"
@@ -159,6 +160,7 @@ __lp_board_put() { # what field color
     IFS=" " read -r row raw_col raw_field_len <<<"${BOARD_LOC["$field"]}"
 
     if (( _LP_SHELL_zsh )); then
+        # FIXME use _LP_FIRST_INDEX to avoid a test.
         # 1-indexing
         row=$((row+1))
         raw_col=$((raw_col+1))
@@ -176,6 +178,12 @@ __lp_board_put() { # what field color
     local data="$what"
     local data_len=${#data}
 
+    if (( _LP_SHELL_zsh )); then
+        local board_value="${BOARD_TEMPLATE[row][raw_col,raw_col+raw_field_len]}"
+    else
+        local board_value="${BOARD_TEMPLATE[row]:raw_col:raw_field_len}"
+    fi
+
     # Replace any single character with the boolean mark.
     if [[ "$raw_data" == "$SP_MARK_HIDDEN" ]]; then
         local i
@@ -190,25 +198,34 @@ __lp_board_put() { # what field color
         data_len=$raw_field_len
         raw_data="$data"
         raw_data_len=$data_len
-    elif [[ $raw_field_len -eq 1 ]]; then
-        if [[ $raw_data != 0 && "$raw_data" != " " ]]; then
+
+    elif [[ $raw_field_len -eq 1 && "$raw_data" != "0" ]]; then
+        if [[ "$board_value" == "◌" ]]; then
             data="●"
-            data_len=1
-            raw_data="$data"
-            raw_data_len=1
+        elif [[ "$board_value" == " " ]]; then
+            if (( _LP_SHELL_zsh )); then
+                data="${raw_data[1,2]}"
+            else
+                data="${raw_data:0:1}"
+            fi
+        else
+            data="$board_value"
         fi
+        data_len=1
+        raw_data="$data"
+        raw_data_len=1
     fi
 
     # printf "FIRST raw_data:«${raw_data}»\n"
     # printf "$raw_field_len -ne 0 && $raw_data_len -gt $raw_field_len\n"
     # If the data is too large to fit the field.
-    if [[ $raw_field_len -ne 0 && $raw_data_len -gt $raw_field_len ]]; then
+    if [[ $raw_field_len -ne 0 && $raw_data_len -gt $raw_field_len ]]; then # FIXME shorten too much by one char.
         if (( _LP_SHELL_zsh )); then
             #Here, raw_field_len == 1+raw_field_len-1
-            raw_data="${raw_data[1,raw_field_len]}…"
+            raw_data="${raw_data[1,1+raw_field_len-${#shorten_char}]}${shorten_char}"
         else
             # Shorten to fit the field.
-            raw_data="${raw_data:0:$((raw_field_len-1))}…"
+            raw_data="${raw_data:0:$((raw_field_len-${#shorten_char}))}${shorten_char}"
         fi
         raw_data_len="$raw_field_len"
         data="$raw_data" # FIXME this remove any color.
@@ -815,3 +832,609 @@ _lp_solid_theme_prompt() {
 }
 
 
+_lp_smallid_theme_activate() {
+
+    if ! _lp_version_greatereq 2 2 0 ; then
+        _lp_join "." ${_LP_VERSION[@]}
+        printf "WARNING: the Smallid theme requires Liquid Prompt >= 2.2.0, but you have version $lp_join, some features will not work and the prompt may crash.\n"
+    fi
+
+    local lp_terminal_format
+    lp_terminal_format 243 -1 0 0 4 0
+    SP_COLOR_BASE="$lp_terminal_format"
+
+    lp_terminal_format 11 -1 0 0 6 0
+    SP_COLOR_NOTE="$lp_terminal_format"
+
+    lp_terminal_format 9 -1 0 0 11 0
+    SP_COLOR_WARN="$lp_terminal_format"
+
+    SP_MARK_HIDDEN="░" #─/·▨■✗✘✕✖X/░╱╳
+
+    LP_COLOR_PATH="$SP_COLOR_NOTE"
+    LP_COLOR_PATH_LAST_DIR="$SP_COLOR_WARN"
+    LP_COLOR_PATH_VCS_ROOT="$SP_COLOR_WARN"
+    LP_COLOR_PATH_SHORTENED="$SP_COLOR_BASE"
+    LP_COLOR_PATH_SEPARATOR="$SP_COLOR_BASE"
+
+        #Double-width char
+        #⬇
+        #0     5    10   15   20   25   30   35   40   45   50   55
+        #|X····|····|····|····|····|····|····|····|····|····|····|·
+        #0     5    10   15   20    25   30   35   40   45   50   55
+        #|X····|····|····|····|···X·|····|····|····|····|····|····|·
+        #0     5    10   15   20    25   30   35   40    45   50   55
+        #|X····|····|····|····|···X·|····|····|····|X····|····|····|·
+    #readonly
+    BOARD_TEMPLATE=(
+        '🤖[______]─[______]─[ ]·🧿─[___]─[___]─[___]─[___]─[___]' # 0 user host shell OS...
+        '🌳[y]─[n]─[r]─[k]─[t]─[o]─[a]─[s]─[m]─[c]─[____________]' # 1 envs
+        '⏱️ [L]─[M]─[ ]─[D]─[T]··📚─[z]─[k]─[d]┐··🔐─[û]─[ů]─[ç]  ' # 2 sensors jobs rights
+        '⚠️ [E]─[_______]─[___]··🔗─[↥]─[X]─[m]┴[s]··🏷️ ─[____]├[d]' # 3 err mean rntm rmot tag drstck
+        '📍[____________________________________________]─[⛨]┴[S]' # 4 path RO shlvl
+        '🔖[ ]─[____]─[c]··[C]─[_____]─[v]─[b]─[____]─[d]─[s]─[u]' # 5 VCS
+        #|X····|····|····|····|····|····|····|····|····|····|····|·
+        #0     5    10   15   20   25   30   35   40   45   50   55
+    )
+
+    declare -A -g BOARD_LOC
+    # BOARD_LOC["lp_version"]="0 11 5"
+    BOARD_LOC["user"]="0 2 6"
+    BOARD_LOC["host"]="0 11 6"
+    BOARD_LOC["shel"]="0 20 1"
+
+    BOARD_LOC["arch"]="0 26 3"
+    BOARD_LOC["krnl"]="0 32 3"
+    BOARD_LOC["fmly"]="0 38 3"
+    BOARD_LOC["dstr"]="0 44 3"
+    BOARD_LOC["osvers"]="0 50 3"
+
+    BOARD_LOC["pyev"]="1 2 1"
+    BOARD_LOC["node"]="1 6 1"
+    BOARD_LOC["ruby"]="1 10 1"
+    BOARD_LOC["kube"]="1 14 1"
+    BOARD_LOC["trfm"]="1 18 1"
+    BOARD_LOC["cont"]="1 22 1"
+    BOARD_LOC["awsp"]="1 26 1"
+    BOARD_LOC["scls"]="1 30 1"
+    BOARD_LOC["modl"]="1 34 1"
+    BOARD_LOC["cmak"]="1 38 1"
+    BOARD_LOC["envv"]="1 42 12"
+
+    BOARD_LOC["load"]="2 4 1"
+    BOARD_LOC["mram"]="2 8 1"
+    BOARD_LOC["batt"]="2 12 1"
+    BOARD_LOC["disk"]="2 16 1"
+    BOARD_LOC["temp"]="2 20 1"
+
+    BOARD_LOC["suspd"]="2 27 1"
+    BOARD_LOC["bkgrd"]="2 31 1"
+    BOARD_LOC["dtchd"]="2 35 1"
+
+    BOARD_LOC["su"]="2 43 1"
+    BOARD_LOC["sudo"]="2 47 1"
+    BOARD_LOC["chroot"]="2 51 1"
+
+    BOARD_LOC["error"]="3 4 1"
+    BOARD_LOC["emng"]="3 8 7"
+    BOARD_LOC["rntm"]="3 18 3"
+
+    BOARD_LOC["proxy"]="3 27 1"
+    BOARD_LOC["X11"]="3 31 1"
+    BOARD_LOC["mux"]="3 35 1"
+    BOARD_LOC["RSH"]="3 39 1"
+
+    BOARD_LOC["ptag"]="3 48 4"
+
+    BOARD_LOC["drstk"]="3 55 1"
+
+    LP_PATH_LENGTH=44
+    BOARD_LOC["path"]="4 2 $LP_PATH_LENGTH"
+    BOARD_LOC["RO"]="4 49 1"
+    BOARD_LOC["shlvl"]="4 53 1"
+
+    BOARD_LOC["VCS"]="5 2 1"
+    BOARD_LOC["remt"]="5 6 4"
+    BOARD_LOC["behind"]="5 13 1"
+    BOARD_LOC["ahead"]="5 18 1"
+    BOARD_LOC["brch"]="5 22 5"
+    BOARD_LOC["vers"]="5 30 1"
+    BOARD_LOC["bkmk"]="5 34 1"
+    BOARD_LOC["hdst"]="5 38 4"
+    BOARD_LOC["diff"]="5 45 1"
+    BOARD_LOC["stash"]="5 49 1"
+    BOARD_LOC["utrak"]="5 53 1"
+
+    _lp_default_theme_activate
+}
+
+_lp_smallid_theme_directory() {
+    _lp_default_theme_directory
+}
+
+
+_lp_smallid_theme_prompt() {
+    local color
+
+    _lp_default_theme_prompt_data
+
+    # Copy a fresh template.
+    BOARD_CURRENT=("${BOARD_TEMPLATE[@]}")
+
+    BOARD_DELTA=(
+        0 #  0
+        0 #  1
+        0 #  2
+        0 #  3
+        0 #  4
+        0 #  5
+        0 #  6
+        0 #  7
+        0 #  8
+        0 #  9
+        0 # 10
+        0 # 11
+        0 # 12
+        0 # 13
+    )
+
+    # if [[ "${#_LP_VERSION[@]}" -gt 0 ]]; then
+    #     local lp_version="${_LP_VERSION[_LP_FIRST_INDEX+0]}.${_LP_VERSION[_LP_FIRST_INDEX+1]}.${_LP_VERSION[_LP_FIRST_INDEX+2]}"
+    #     if _lp_version_greatereq 2 2 0; then
+    #         __lp_board_put "$lp_version" "lp_version" "$SP_COLOR_NOTE"
+    #     else
+    #         __lp_board_put "$lp_version" "lp_version" "$SP_COLOR_WARN"
+    #     fi
+    # else
+    #         __lp_board_put "?.?.?" "lp_version" "$SP_COLOR_BASE"
+    # fi
+
+    # Prompt line #0
+
+    if _lp_username; then
+        _lp_user
+        if [[ $? -eq 2 ]]; then # Root
+            color="$SP_COLOR_WARN"
+        else
+            color="$SP_COLOR_NOTE"
+        fi
+        __lp_board_put "$lp_username" "user" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "user" "$SP_COLOR_BASE"
+    fi
+
+    if _lp_hostname; then
+        __lp_board_put "$lp_hostname" "host" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "host" "$SP_COLOR_BASE"
+    fi
+
+    if ((_LP_SHELL_zsh)); then
+        __lp_board_put "Z" "shel" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "B" "shel" "$SP_COLOR_NOTE"
+    fi
+
+    if (( LP_ENABLE_OS )); then
+        _lp_os # No need to call it later again.
+        if (( LP_ENABLE_OS_ARCH )); then
+            __lp_board_put "$lp_os_arch" "arch" "$SP_COLOR_NOTE" ""
+        else
+            __lp_board_put "$SP_MARK_HIDDEN" "arch" "$SP_COLOR_BASE"
+        fi
+        if (( LP_ENABLE_OS_KERNEL )); then
+            __lp_board_put "$lp_os_kernel" "krnl" "$SP_COLOR_NOTE" ""
+        else
+            __lp_board_put "$SP_MARK_HIDDEN" "krnl" "$SP_COLOR_BASE"
+        fi
+        if (( LP_ENABLE_OS_FAMILY )); then
+            __lp_board_put "$lp_os_family" "fmly" "$SP_COLOR_NOTE" ""
+        else
+            __lp_board_put "$SP_MARK_HIDDEN" "fmly" "$SP_COLOR_BASE"
+        fi
+        if (( LP_ENABLE_OS_DISTRIB )); then
+            __lp_board_put "$lp_os_distrib" "dstr" "$SP_COLOR_NOTE" ""
+        else
+            __lp_board_put "$SP_MARK_HIDDEN" "dstr" "$SP_COLOR_BASE"
+        fi
+        if (( LP_ENABLE_OS_VERSION )); then
+            __lp_board_put "$lp_os_vers" "osvers" "$SP_COLOR_NOTE" ""
+        else
+            __lp_board_put "$SP_MARK_HIDDEN" "osvers" "$SP_COLOR_BASE"
+        fi
+
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "arch" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "krnl" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "fmly" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "dstr" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "osvers" "$SP_COLOR_BASE"
+    fi
+
+
+    # Prompt line #1
+
+    if (( LP_ENABLE_VIRTUALENV )); then
+        if _lp_python_env; then
+            __lp_board_put "$lp_python_env" "pyev" "$SP_COLOR_NOTE"
+        fi
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "pyev" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_NODE_VENV )); then
+        __lp_board_put "$LP_NODE_VENV" "node" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "node" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_RUBY_VENV )); then
+        __lp_board_put "$LP_RUBY_VENV" "ruby" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "ruby" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_KUBECONTEXT )); then
+        __lp_board_put "$LP_KUBECONTEXT" "kube" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "kube" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_TERRAFORM )); then
+        __lp_board_put "$LP_TFSPACE" "trfm" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "trfm" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_CONTAINER )); then
+        __lp_board_put "$LP_CONTAINER" "cont" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "cont" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_AWS_PROFILE )); then
+        __lp_board_put "$LP_AWS_PROFILE" "awsp" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "awsp" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_SCLS )); then
+        __lp_board_put "$LP_SCLS" "scls" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "scls" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_MODULES )); then
+        __lp_board_put "$LP_MODULES" "modl" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "modl" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_CMAKE )); then
+        if _lp_cmake; then
+            __lp_board_put "$lp_cmake_buildtype" "cmak" "$SP_COLOR_NOTE"
+        fi
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "cmak" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_ENV_VARS )); then
+        if _lp_env_vars; then
+            _lp_join "" ${lp_env_vars[@]}
+            __lp_board_put "$lp_join" "envv" "${SP_COLOR_NOTE}"
+        fi
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "envv" "$SP_COLOR_BASE"
+    fi
+
+    # Prompt line #2
+
+    if (( LP_ENABLE_LOAD )); then
+        if _lp_load; then
+            color="$SP_COLOR_WARN"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "${lp_load_adjusted}" "load" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "load" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_RAM )); then
+        if _lp_ram; then
+            color="$SP_COLOR_WARN"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "${lp_ram_perc}${_LP_PERCENT}" "mram" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "mram" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_BATT )); then
+        _lp_battery
+        local -i _status="$?"
+        local sp_batt
+
+        if (( _status >= 4 )); then
+                # no battery support or battery full
+            if (( lp_battery == 100 )); then
+                # battery full
+                sp_batt="B"
+            color="$SP_COLOR_BASE"
+            fi
+        elif (( _status == 3 )); then
+            # charging and above threshold and not 100%
+            sp_batt="↑"
+            color="$SP_COLOR_NOTE"
+        elif (( _status == 2 )); then
+            # charging but under threshold
+            sp_batt="↑"
+            color="$SP_COLOR_NOTE"
+        elif (( _status == 1 )); then
+            # discharging but above threshold
+            sp_batt="↓"
+            color="$SP_COLOR_NOTE"
+        else
+            # discharging and under threshold
+            sp_batt="↓"
+            color="$SP_COLOR_WARN"
+        fi
+
+        __lp_board_put "${sp_batt}" "batt" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "batt" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_DISK )); then
+        if _lp_disk; then
+            color="$SP_COLOR_WARN"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "1" "disk" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "disk" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_TEMP )); then
+        if _lp_temperature; then
+            color="$SP_COLOR_WARN"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "1" "temp" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "temp" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_JOBS )); then
+        _lp_jobcount
+        if [[ $lp_stopped_jobs -gt 0 ]]; then
+            color="$SP_COLOR_NOTE"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "1" "suspd" "$color"
+        if [[ $lp_running_jobs -gt 0 ]]; then
+            color="$SP_COLOR_NOTE"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "1" "bkgrd" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "suspd" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "bkgrd" "$color"
+    fi
+
+    if (( LP_ENABLE_DETACHED_SESSIONS )); then
+        _lp_detached_sessions
+        if [[ $lp_detached_sessions -gt 0 ]]; then
+            color="$SP_COLOR_NOTE"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "1" "dtchd" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "dtchd" "$SP_COLOR_BASE"
+    fi
+
+    if _lp_hostname; then
+        if [[ "$lp_connection" == "su" ]]; then
+            __lp_board_put "1" "su" "$SP_COLOR_WARN"
+        fi
+    fi
+
+    if (( LP_ENABLE_SUDO )); then
+        if _lp_sudo_active; then
+            __lp_board_put "1" "sudo" "$SP_COLOR_WARN"
+        fi
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "sudo" "$SP_COLOR_BASE"
+    fi
+
+    # TODO add LP_ENABLE_CHROOT in Liquid Prompt
+    if _lp_chroot; then
+        __lp_board_put "1" "chroot" "$SP_COLOR_WARN"
+    fi
+
+    # Prompt line #3
+
+    if (( LP_ENABLE_ERROR )); then
+        if _lp_error; then
+            __lp_board_put "1" "error" "$SP_COLOR_WARN"
+        fi
+        if (( LP_ENABLE_ERROR_MEANING )); then
+            if _lp_error; then
+                __lp_board_put "$lp_error_meaning" "emng" "$SP_COLOR_WARN"
+            fi
+        else
+            __lp_board_put "$SP_MARK_HIDDEN" "emng" "$SP_COLOR_BASE"
+        fi
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "error" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "emng" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_RUNTIME )); then
+        if _lp_runtime_format; then # FIXME bug?
+            local color="$SP_COLOR_NOTE"
+            if (( _LP_RUNTIME_SECONDS >= LP_RUNTIME_THRESHOLD )); then
+                color="$SP_COLOR_WARN"
+            fi
+            __lp_board_put "$lp_runtime_format" "rntm" "$color"
+        fi
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "rntm" "$SP_COLOR_BASE"
+    fi
+
+    if (( LP_ENABLE_PROXY )); then
+        __lp_board_put "$LP_PROXY" "proxy" "$SP_COLOR_NOTE"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "proxy" "$SP_COLOR_BASE"
+    fi
+
+    # TODO add LP_ENABLE_DISPLAY in Liquid Prompt
+    if _lp_connected_display; then
+        __lp_board_put "1" "X11" "$SP_COLOR_NOTE"
+    fi
+
+    # TODO: add LP_ENABLE_TMUX todo Liquid Prompt
+    if _lp_multiplexer; then
+        __lp_board_put "$lp_multiplexer" "mux" "$SP_COLOR_NOTE"
+    fi
+
+    if _lp_hostname; then
+        case "$lp_connection" in
+        ssh)
+            __lp_board_put "1" "RSH" "$SP_COLOR_NOTE"
+            ;;
+        tel)
+            __lp_board_put "1" "RSH" "$SP_COLOR_WARN"
+            ;;
+        esac
+    fi
+
+    __lp_board_put "$LP_PS1_PREFIX" "ptag" "$SP_COLOR_NOTE"
+
+    if (( LP_ENABLE_DIRSTACK )); then
+        if _lp_dirstack; then
+            __lp_board_put "$lp_dirstack" "drstk" "$SP_COLOR_NOTE"
+        fi
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "drstk" "$SP_COLOR_BASE"
+    fi
+
+
+    # Prompt line #4
+
+    __lp_board_put "$LP_PWD" "path" # No forced color, already set as global config.
+
+    # FIXME add LP_ENABLE_READONLY to Liquid Prompt
+    if [[ ! -w "${PWD}" ]]; then
+        __lp_board_put "1" "RO" "$SP_COLOR_WARN"
+    fi
+
+    if (( LP_ENABLE_SHLVL )); then
+        if _lp_shell_level; then
+            color="$SP_COLOR_NOTE"
+        else
+            color="$SP_COLOR_BASE"
+        fi
+        __lp_board_put "$lp_shell_level" "shlvl" "$color"
+    else
+        __lp_board_put "$SP_MARK_HIDDEN" "shlvl" "$SP_COLOR_BASE"
+    fi
+
+
+    # Prompt line #5
+
+    if ! _lp_are_vcs_enabled; then
+        __lp_board_put "$SP_MARK_HIDDEN" "VCS" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "remt" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "ahead" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "behind" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "brch" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "vers" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "bkmk" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "hdst" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "diff" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "stash" "$SP_COLOR_BASE"
+        __lp_board_put "$SP_MARK_HIDDEN" "utrak" "$SP_COLOR_BASE"
+    else
+        _lp_find_vcs
+        local found_vcs="$?"
+        if [[ $found_vcs -eq 0 ]]; then
+            __lp_board_put "$lp_vcs_type" "VCS" "$SP_COLOR_NOTE"
+
+            if _lp_vcs_remote; then
+                __lp_board_put "$lp_vcs_remote" "remt" "$SP_COLOR_NOTE"
+            fi
+
+            if _lp_vcs_commits_off_remote; then
+                local has_commit=
+                if [[ "$lp_vcs_commit_behind" -ne "0" ]]; then
+                    __lp_board_put "$lp_vcs_commit_behind" "behind" "$SP_COLOR_NOTE"
+                fi
+                if [[ "$lp_vcs_commit_ahead" -ne "0" ]]; then
+                    has_commit="$lp_vcs_commit_ahead"
+                    __lp_board_put "$lp_vcs_commit_ahead" "ahead" "$SP_COLOR_NOTE"
+                fi
+            fi
+
+            if _lp_vcs_branch; then
+                __lp_board_put "$lp_vcs_branch" "brch" "$SP_COLOR_NOTE"
+            fi
+
+            if ! _lp_vcs_branch; then
+                if _lp_vcs_tag; then
+                    __lp_board_put "$lp_vcs_tag" "vers" "$SP_COLOR_NOTE"
+                else
+                    _lp_vcs_commit_id
+                    __lp_board_put "$lp_vcs_commit_id" "vers" "$SP_COLOR_NOTE"
+                fi
+            fi
+
+            if _lp_vcs_bookmark; then
+                __lp_board_put "$lp_vcs_bookmark" "bkmk" "$SP_COLOR_NOTE"
+            fi
+
+            if _lp_vcs_head_status; then
+                __lp_board_put "$lp_vcs_head_status" "hdst" "$SP_COLOR_NOTE"
+                # TODO lp_vcs_head_details
+            fi
+
+            if _lp_vcs_uncommitted_files; then
+                local ret has_lines=
+                _lp_vcs_unstaged_lines; ret=$?
+                # Only show unstaged changes if the VCS supports staging, otherwise
+                # show uncommitted changes
+                if (( ret == 0 )); then
+                    has_lines="+$lp_vcs_unstaged_i_lines/-$lp_vcs_unstaged_d_lines"
+                elif (( ret == 1 )); then
+                    has_lines="+0/-0"
+                else
+                    _lp_vcs_uncommitted_lines
+                    has_lines="+$lp_vcs_uncommitted_i_lines/-$lp_vcs_uncommitted_d_lines"
+                fi
+                __lp_board_put "$has_lines" "diff" "$SP_COLOR_NOTE"
+            fi
+
+            if _lp_vcs_stash_count; then
+                __lp_board_put "$lp_vcs_stash_count" "stash" "$SP_COLOR_NOTE"
+            fi
+
+
+            if _lp_vcs_untracked_files; then
+                __lp_board_put "$lp_vcs_untracked_files" "utrak" "$SP_COLOR_NOTE"
+            fi
+        fi
+    fi
+
+    local n=$'\n'
+    PS1="$n"
+    for line in "${BOARD_CURRENT[@]}"; do
+        PS1+="${SP_COLOR_BASE}${line}${n}"
+    done
+    PS1+="${SP_COLOR_BASE}➡️ ${NO_COL}"
+}

@@ -1,7 +1,7 @@
 Solid — A Liquid Prompt Theme
 =============================
 
-Solid is a didactic theme for [Liquid Prompt](https://github.com/nojhan/liquidprompt).
+Solid is a set of two didactic themes for [Liquid Prompt](https://github.com/nojhan/liquidprompt).
 
 Its aim is not to actually be used as a day-to-day prompt (but you do you),
 but to expose everything that Liquid Prompt actually watches.
@@ -12,6 +12,9 @@ So far, *Solid* works for modern shells, supporting associative arrays
 Note that Liquid Prompt does not have this requirement,
 so it may work on your system, while *Solid* does not.
 
+The two themes are `solid`, a large array of information,
+and `smallid`, a dense array of tags.
+
 
 Preview
 -------
@@ -21,13 +24,14 @@ Preview
 ![image](solid-demo.png)
 
 
-Rationale
----------
+Solid Rationale
+---------------
 
 The `solid` theme displays (almost) all the information that Liquid Prompt can display.
 All variables are always displayed at the very same location, so that you may always see their state.
 That way, you can explore and understand how Liquid Prompt actually react to your system's state,
 which may be especially useful if you are a theme designer.
+
 
 ### Explanations
 
@@ -45,6 +49,22 @@ If the field content is important or indicates a potentially dangerous state,
 it is displayed in yellow.
 
 
+Smallid Rationale
+-----------------
+
+The `smallid` theme follows the same idea of displaying everything at the same place,
+but does it mostly by coloring tags, showing less detailled information,
+but in a smallest array.
+
+
+### Explanations
+
+Each element of the table is either a single letter/icon, or a small text field.
+When the feature is disabled, it shows a `░` character, when it is enabled but
+no information is to be displayed, the letter is in the base color.
+When some information is available, the letter is colored.
+
+
 Install
 -------
 
@@ -59,7 +79,7 @@ echo '# Use Liquid Prompt only if in an interactive shell
         source ~/.liquidprompt
         # Use the solid theme if it has been downloaded in ~.
         if [[ -f ~/lp-solid/solid.theme ]] ; then
-            source ~/lp-solid/solid.theme && lp_theme solid
+            source ~/lp-solid/solid.theme && lp_theme solid # Or lp_theme smallid
         fi
     fi' >> ~/.bashrc
 ```
