@@ -19,9 +19,16 @@ and `smallid`, a dense array of tags.
 Preview
 -------
 
+### Solid
+
 ![image](solid-long.png)
 
 ![image](solid-demo.png)
+
+
+### Smallid
+
+![image](smallid-demo.png)
 
 
 Solid Rationale
